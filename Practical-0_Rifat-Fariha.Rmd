@@ -58,3 +58,12 @@ ggplot(datasaurus_dozen, aes(x = x, y = y, color = dataset))+
   facet_wrap(~ dataset, ncol = 3) +
   theme(legend.position = "none")
 ```
+```{r}
+datasaurus_dozen %>%
+  group_by(dataset) %>%
+  summarize(r = cor(x, y))
+```
+
+
+
+
