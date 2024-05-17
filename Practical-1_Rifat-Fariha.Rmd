@@ -1,0 +1,42 @@
+---
+title: "Practical 1"
+author: "Rifat Fariha B00937648"
+date: "2024-05-17"
+output: html_document
+---
+
+# Introduction
+
+The Brazilian public health system, known as SUS for Unified Health System in its acronym in Portuguese, is one of the largest health system in the world, representing government investment of more than 9% of GDP. However, its operation is not homogeneous and there are distinct perceptions of quality from citizens in different regions of the country. Non-attendance of medical appointments contributes a significant additional burden on limited medical resources. This analysis will try and investigate possible factors behind non-attendance using an administrative database of appointment data from Vitoria, Espírito Santo, Brazil.
+
+# Understanding the Data
+
+## Use the data dictionary describe each of the variables/features in the CSV in your report.
+
+PatientID: Unique identifier for each patient 
+AppointmentID: Unique identifier to each appointment 
+Gender: Patient Gender (limited to Male or Female)
+ScheduledDate: date on which the appointment was scheduled
+AppointmentDate: date of the actual appointment
+Age: Patient age
+Neighbourhood: District of Vitória in which the appointment 
+SocialWelfare: Patient is a recipient of Bolsa Família welfare payments
+Hypertension: Patient previously diagnoised with hypertensio (Boolean)
+Diabetes: Patient previously diagnosed with diabetes (Boolean)
+AlcoholUseDisorder: Patient previously diagnosed with alcohol use disorder (Boolean)
+Disability: Patient previously diagnosed with a disability (severity rated 0-4)
+SMSReceived: At least 1 reminder text sent before appointment (Boolean)
+NoShow: Patient did not attend scheduled appointment (Boolean: Yes/No)
+
+## Can you think of 3 hypotheses for why someone may be more likely to miss a medical appointment?
+
+*Hypothesis 1:* Patients diagnosed with alcohol use disorder are more likely to miss their medical appointments compared to patients without such conditions.
+
+*Hypothesis 2:* The severity of a patient's disability affects their likelihood of missing their medical appointments.
+
+*Hypothesis 3:* Patients who receive reminder texts (SMS) are less likely to miss their medical appointments compared to those who do not receive such reminders.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
