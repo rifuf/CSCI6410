@@ -20,4 +20,13 @@ datasaurus_dozen %>%
 ```{r}
 dino_data <- datasaurus_dozen %>%
   filter(dataset == "dino")
+
+ggplot(data = dino_data, mapping = aes(x = x, y = y)) +
+  geom_point()
 ```
+```{r}
+dino_data %>%
+  summarize(r = cor(x, y))
+```
+
+
