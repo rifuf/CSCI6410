@@ -28,5 +28,14 @@ ggplot(data = dino_data, mapping = aes(x = x, y = y)) +
 dino_data %>%
   summarize(r = cor(x, y))
 ```
+```{r}
+star_data <- datasaurus_dozen %>%
+  filter(dataset == "star")
 
-
+ggplot(data = star_data, mapping = aes(x = x, y = y)) +
+  geom_point()
+```
+```{r}
+star_data %>%
+  summarize(r = cor(x, y))
+```
