@@ -39,3 +39,17 @@ ggplot(data = star_data, mapping = aes(x = x, y = y)) +
 star_data %>%
   summarize(r = cor(x, y))
 ```
+
+```{r}
+circle_data <- datasaurus_dozen %>%
+  filter(dataset == "circle")
+
+ggplot(data = circle_data, mapping = aes(x = x, y = y)) +
+  geom_point()
+```
+```{r}
+circle_data %>%
+  summarize(r = cor(x, y))
+```
+
+
