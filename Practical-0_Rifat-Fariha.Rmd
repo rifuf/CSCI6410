@@ -2,10 +2,22 @@
 title: "Practical 0"
 author: "Rifat Fariha"
 date: "2024-05-17"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
 library(tidyverse) 
 library(datasauRus)
+```
+
+```{r}
+datasaurus_dozen %>%
+  count(dataset)
+```
+
+```{r}
+dino_data <- datasaurus_dozen %>%
+  filter(dataset == "dino")
 ```
