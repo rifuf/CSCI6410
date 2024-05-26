@@ -287,3 +287,35 @@ Far more exploration could still be done, including dimensionality reduction app
 
 However, maybe we can generate some new features/variables that more strongly relate to the `NoShow`.
 
+## Feature Engineering
+
+Let's begin by seeing if appointments on any day of the week has more no-show's. Fortunately, the `lubridate` library makes this quite easy!
+
+```{r}
+raw.data <- raw.data %>% mutate(AppointmentDay = wday(AppointmentDate, label=TRUE, abbr=TRUE), 
+                                 ScheduledDay = wday(ScheduledDate,  label=TRUE, abbr=TRUE))
+
+ggplot(raw.data) +
+  geom_bar(aes(x=AppointmentDay, fill=NoShow)) +
+  ggtitle("Amount of No Show across Appointment Day") 
+
+ggplot(raw.data) +
+  geom_bar(aes(x=AppointmentDay, fill=NoShow), position = 'fill') +
+  ggtitle("Proportion of No Show across Appointment Day") 
+
+```
+
+Let's begin by creating a variable called `Lag`, which is the difference between when an appointment was scheduled and the actual appointment.
+
+```{r, fig.align="center"}
+raw.data <- raw.data %>% mutate(Lag.days=difftime(AppointmentDate, ScheduledDate, units = "days"),
+                                Lag.hours=difftime(AppointmentDate, ScheduledDate, units = "hours"))
+
+ggplot(raw.data) + 
+  geom_density(aes(x=Lag.days, fill=NoShow), alpha=0.7)+
+  ggtitle("Density of Lag (days) by attendance")
+```
+
+**15** Have a look at the values in lag variable, does anything seem odd?
+
+Yes, it seems that there are appointments with negative lag values. This is impossible since the time between scheduling and appointment should be non-negative.
