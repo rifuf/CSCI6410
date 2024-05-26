@@ -319,3 +319,88 @@ ggplot(raw.data) +
 **15** Have a look at the values in lag variable, does anything seem odd?
 
 Yes, it seems that there are appointments with negative lag values. This is impossible since the time between scheduling and appointment should be non-negative.
+
+## Predictive Modeling
+
+Let's see how well we can predict NoShow from the data. 
+
+We'll start by preparing the data, followed by splitting it into testing and training set, modeling and finally, evaluating our results. For now we will subsample but please run on full dataset for final execution.
+
+```{r}
+### REMOVE SUBSAMPLING FOR FINAL MODEL
+data.prep <- raw.data %>% select(-AppointmentID, -PatientID) #%>% sample_n(10000)
+
+set.seed(42)
+data.split <- initial_split(data.prep, prop = 0.7)
+train  <- training(data.split)
+test <- testing(data.split)
+```
+
+Let's now set the cross validation parameters, and add classProbs so we can use AUC as a metric for xgboost.
+
+```{r}
+fit.control <- trainControl(method="cv",number=3,
+                           classProbs = TRUE, summaryFunction = twoClassSummary)
+```
+
+**16** Based on the EDA, how well do you think this is going to work?
+
+
+
+Now we can train our XGBoost model
+```{r}
+xgb.grid <- expand.grid(eta=c(0.05),
+                       max_depth=c(4),colsample_bytree=1,
+                       subsample=1, nrounds=500, gamma=0, min_child_weight=5)
+
+xgb.model <- train(NoShow ~ .,data=train, method="xgbTree",metric="ROC",
+                  tuneGrid=xgb.grid, trControl=fit.control)
+
+xgb.pred <- predict(xgb.model, newdata=test)
+xgb.probs <- predict(xgb.model, newdata=test, type="prob")
+```
+
+```{r}
+test <- test %>% mutate(NoShow.numerical = ifelse(NoShow=="Yes",1,0))
+confusionMatrix(xgb.pred, test$NoShow, positive="Yes")
+paste("XGBoost Area under ROC Curve: ", round(auc(test$NoShow.numerical, xgb.probs[,2]),3), sep="")
+```
+This isn't an unreasonable performance, but let's look a bit more carefully at the correct and incorrect predictions,
+
+```{r ,fig.align="center"}
+xgb.probs$Actual = test$NoShow.numerical
+xgb.probs$ActualClass = test$NoShow
+xgb.probs$PredictedClass = xgb.pred
+xgb.probs$Match = ifelse(xgb.probs$ActualClass == xgb.probs$PredictedClass,
+                         "Correct","Incorrect")
+# [4.8] Plot Accuracy
+xgb.probs$Match = factor(xgb.probs$Match,levels=c("Incorrect","Correct"))
+ggplot(xgb.probs,aes(x=Yes,y=Actual,color=Match))+
+  geom_jitter(alpha=0.2,size=0.25)+
+  scale_color_manual(values=c("grey40","orangered"))+
+  ggtitle("Visualizing Model Performance", "(Dust Plot)")
+```
+Finally, let's close it off with the variable importance of our model:
+
+```{r,fig.align="center"}
+results = data.frame(Feature = rownames(varImp(xgb.model)$importance)[1:10],
+                     Importance = varImp(xgb.model)$importance[1:10,])
+
+results$Feature = factor(results$Feature,levels=results$Feature)
+
+
+# [4.10] Plot Variable Importance
+ggplot(results, aes(x=Feature, y=Importance,fill=Importance))+
+  geom_bar(stat="identity")+
+  scale_fill_gradient(low="grey20",high="orangered")+
+  ggtitle("XGBoost Variable Importance")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+**17** Using the [caret package](https://topepo.github.io/caret/) fit and evaluate 1 other ML model on this data.
+
+I am training a "..." model to evaluate the results on this data.
+
+```{r}
+library(caret)
+```
+
