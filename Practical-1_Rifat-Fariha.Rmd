@@ -163,4 +163,127 @@ numeric.data = mutate_all(raw.data, function(x) as.numeric(x))
 corplot(numeric.data)
 ```
 
+Correlation heatmaps are useful for identifying linear relationships between variables/features. In this case, we are particularly interested in relationships between `NoShow` and any specific variables.
+
+
+**7** Which parameters most strongly correlate with missing appointments (`NoShow`)?
+
+From the Pearson correlation coefficient heatmap, we can see that SMS Received has a positive correlation with 'NoShow' which means patients who receive reminder SMS are less likely to miss their appointments.
+
+Other than that, we can see that Age has the weakest correlation with 'NoShow' which means age usually does not impact whether a patient will miss their appointments. 
+
+**8** Are there any other variables which strongly correlate with one another?
+
+Hypertension and Diabetes show positive correlation which refers to patients having one condition to likely also have the other condition. Schedule Date and SMS Received also show negative correlation which basically means patients who receive SMS are likely to be aware of their appointment date.
+
+**9** Do you see any issues with PatientID/AppointmentID being included in this plot?
+
+Both PatientID and Appointment ID are unique to each patient and appointment. They do not provide any meaningful insight and has no impact on the appointment NoShow. Hence, including them in the plot is unnecessary and is generally advisable to remove from such correlation plots.
+
+Let's look at some individual variables and their relationship with `NoShow`.
+
+```{r,fig.align="center"}
+ggplot(raw.data) + 
+  geom_density(aes(x=Age, fill=NoShow), alpha=0.8) + 
+  ggtitle("Density of Age by Attendence")
+```
+There does seem to be a difference in the distribution of ages of people that miss and don't miss appointments. However, the shape of this distribution means the actual correlation is near 0 in the heatmap above. This highlights the need to look at individual variables.
+
+Let's take a closer look at age by breaking it into categories.
+
+```{r, fig.align="center"}
+raw.data <- raw.data %>% mutate(Age.Range=cut_interval(Age, length=10))
+
+ggplot(raw.data) + 
+  geom_bar(aes(x=Age.Range, fill=NoShow)) + 
+  ggtitle("Amount of No Show across Age Ranges")
+
+ggplot(raw.data) + 
+  geom_bar(aes(x=Age.Range, fill=NoShow), position='fill') + 
+  ggtitle("Proportion of No Show across Age Ranges")
+
+```
+**10** How could you be misled if you only plotted 1 of these 2 plots of attendance by age group?
+
+The key takeaway from this is that  number of individuals > 90 are very few from plot 1 so probably are very small so unlikely to make much of an impact on the overall distributions. 
+However, other patterns do emerge such as 10-20 age group is nearly twice as likely to miss appointments as the 60-70 years old.
+
+Next, we'll have a look at `SMSReceived` variable:
+
+```{r,fig.align="center"}
+ggplot(raw.data) + 
+  geom_bar(aes(x=SMSReceived, fill=NoShow), alpha=0.8) + 
+  ggtitle("Attendance by SMS Received")
+
+ggplot(raw.data) + 
+  geom_bar(aes(x=SMSReceived, fill=NoShow), position='fill', alpha=0.8) + 
+  ggtitle("Proportion Attendance by SMS Received")
+```
+**11** From this plot does it look like SMS reminders increase or decrease the chance of someone not attending an appointment? Why might the opposite actually be true (hint: think about biases)?
+
+From the plot, it appears that SMS reminders decrease the chance of someone not attending an appointment.
+
+However, the opposite might be true if we take into account certain biases like selection bias or reverse casualty. Patients who actively partake in technology may be selected to receive SMS which skews the results. Moreover, it is entirely plausible that health conscious individuals who are already committed to attending the appointment chose to receive the SMS. 
+
+
+**12** Create a similar plot which compares the the density of `NoShow` across the values of disability 
+
+```{r}
+ggplot(raw.data) + 
+  geom_bar(aes(x=Disability, fill=NoShow), alpha=0.8) + 
+  ggtitle("Attendance by Disability")
+
+ggplot(raw.data) + 
+  geom_bar(aes(x=Disability, fill=NoShow), position='fill', alpha=0.8) + 
+  ggtitle("Proportion Attendance by Disability")
+```
+The plot shows that individuals with higher levels of disability are more prone to missing appointments. However, disability level alone may not be a strong predictor as other factors such as socioeconomic status, accessibility, access to healthcare, etc. likely play a more significant role. 
+
+Now let's look at the neighbourhood data as location can correlate highly with many social determinants of health. 
+
+```{r, fig.align="center"}
+ggplot(raw.data) + 
+  geom_bar(aes(x=Neighbourhood, fill=NoShow)) + 
+  theme(axis.text.x = element_text(angle=45, hjust=1, size=5)) + 
+  ggtitle('Attendance by Neighbourhood')
+
+
+ggplot(raw.data) + 
+  geom_bar(aes(x=Neighbourhood, fill=NoShow), position='fill') + 
+  theme(axis.text.x = element_text(angle=45, hjust=1, size=5)) + 
+  ggtitle('Proportional Attendance by Neighbourhood')
+```
+
+Most neighborhoods have similar proportions of no-show but some have much higher and lower rates.
+
+**13** Suggest a reason for differences in attendance rates across neighbourhoods.
+
+The difference in attendance rates across neighbourhoods could be due to geographic proximity. Individuals living in neighbourhoods that are closer to the healthcare facilities could be less prone to missing their appointments. 
+
+Now let's explore the relationship between gender and NoShow.
+```{r, fig.align="center"}
+ggplot(raw.data) + 
+  geom_bar(aes(x=Gender, fill=NoShow))+
+  ggtitle("Gender by attendance")
+
+ggplot(raw.data) + 
+  geom_bar(aes(x=Gender, fill=NoShow), position='fill')+
+  ggtitle("Proportion Gender by attendance")
+
+```
+**14** Create a similar plot using `SocialWelfare`
+
+```{r ,fig.align="center"}
+ggplot(raw.data) + 
+  geom_bar(aes(x=SocialWelfare, fill=NoShow))+
+  ggtitle("Social Welfare by attendance")
+
+ggplot(raw.data) + 
+  geom_bar(aes(x=SocialWelfare, fill=NoShow), position='fill')+
+  ggtitle("Proportion Social Welfare by attendance")
+
+```
+Far more exploration could still be done, including dimensionality reduction approaches but although we have found some patterns there is no major/striking patterns on the data as it currently stands.
+
+However, maybe we can generate some new features/variables that more strongly relate to the `NoShow`.
 
