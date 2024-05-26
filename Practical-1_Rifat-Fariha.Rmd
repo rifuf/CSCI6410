@@ -57,7 +57,13 @@ NoShow: Patient did not attend scheduled appointment (Boolean: Yes/No)
 
 ## 3. Can you provide 3 examples of important contextual information that is missing in this data dictionary and dataset that could impact your analyses e.g., what type of medical appointment does each 'AppointmentID' refer to?
 
+Three examples of contextual information in regards to the data dictionary and dataset are:
 
+*1. Time of Day:* The dataset does not provide any information regarding the time of day for each appointment. The timing could heavily influence attendance of patient. For example, patients may be prone to missing appointments in the morning rather than in the afternoon. 
+
+*2. Hospital or Clinic Location:* There are also no information regarding the location of the hospital or clinic where the appointment is. Factors regarding the location such as accessibility, distance, and quality of the facility could impact attendance.
+
+*3. Type of Appointment:* The dataset also does not have any information about the type of appointment, like general check-up, vaccination, special consultation, etc. Different appointment types could lead to varying attendance patterns. 
 
 # Data Parsing and Cleaning
 
