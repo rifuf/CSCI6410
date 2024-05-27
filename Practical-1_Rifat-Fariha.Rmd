@@ -345,9 +345,9 @@ fit.control <- trainControl(method="cv",number=3,
 
 **16** Based on the EDA, how well do you think this is going to work?
 
+Due to the subsampling and splitting of the dataset, we can achieve a good training and testing datasets respectively. Hence, I believe we can fit the split data into our models to achieve reasonable performances.  
 
-
-Now we can train our XGBoost model
+Now we can train our XGBoost model.
 ```{r}
 xgb.grid <- expand.grid(eta=c(0.05),
                        max_depth=c(4),colsample_bytree=1,
@@ -398,9 +398,90 @@ ggplot(results, aes(x=Feature, y=Importance,fill=Importance))+
 ```
 **17** Using the [caret package](https://topepo.github.io/caret/) fit and evaluate 1 other ML model on this data.
 
-I am training a "..." model to evaluate the results on this data.
+Another ML model appropriate for this kind of data would be a Random Forest model. Training the model on our data may provide us better accuracy compared to XGBoost.
 
 ```{r}
+# Load the caret package
 library(caret)
+
+# Define the tuning grid
+tuning_grid <- expand.grid(
+  mtry = 2,  # Forcing only 2 variables to be sampled at each split
+  splitrule = "gini",  # Split rule
+  min.node.size = 1  # Minimum node size
+)
+
+# Control parameters for training
+control <- trainControl(method = "cv")
+
+# Fit a Random Forest model using the ranger method with one tree
+rf_fit <- train(
+  NoShow ~ ., 
+  data = train, 
+  method = "ranger", 
+  trControl = control,
+  tuneGrid = tuning_grid,  # Using the defined tuning grid
+  num.trees = 1,  # Setting the number of trees to 1
+  importance = 'impurity'  # Requesting variable importance
+)
+
+# Check if rf_fit is correctly formed
+print(rf_fit)
+
+# Print the results directly
+print(rf_fit$results)
+```
+```{r}
+# Confusion Matrix
+conf_matrix <- confusionMatrix(predictions, test$NoShow)
+print(conf_matrix)
+```
+```{r}
+# Calculate additional metrics
+# Sensitivity and Specificity
+sensitivity <- sensitivity(predictions, test$NoShow)
+specificity <- specificity(predictions, test$NoShow)
+print(paste("Sensitivity: ", sensitivity))
+print(paste("Specificity: ", specificity))
+
+# Precision and Recall
+precision <- posPredValue(predictions, test$NoShow)
+recall <- sensitivity
+print(paste("Precision: ", precision))
+print(paste("Recall: ", recall))
+
+# F1 Score
+f1_score <- (2 * precision * recall) / (precision + recall)
+print(paste("F1 Score: ", f1_score))
+```
+```{r, fig.align="center"}
+# Calculate variable importance
+var_importance <- varImp(rf_fit)
+
+# Print variable importance to see the values
+print(var_importance)
+
+# Identify and extract the top 10 variables
+top_10_vars <- head(var_imp_df[order(-var_imp_df$Overall), ], 10)
+
+# Print the top 10 variables
+print(top_10_vars)
+
+# Plot variable importance using ggplot2 for the top 10 variables only
+ggplot(top_10_vars, aes(x = reorder(Variable, Overall), y = Overall)) +
+  geom_bar(stat = "identity", fill="steelblue") +
+  ggtitle("Top 10 Variable Importance from Random Forest Model") +
+  xlab("Variables") +
+  ylab("Importance") +
+  theme_minimal()
 ```
 
+**18** Based on everything, do you think we can trust analyses based on this dataset? Explain your reasoning.
+
+Based on both the XGBoost and Random Forest analyses and accuracy scores, we can say that this dataset can provide reasonable estimates since both models scored reasonable accuracies when trained on this dataset. 
+
+However, testing the models on only dataset exposes it to high bias and hence the performance should replicated on various external datasets. Moreover, cross-validation between the different models will provide a more robust understanding of the performance of both the dataset and the models. 
+
+## Credits
+
+This notebook was based on a combination of other notebooks e.g., [1](https://www.kaggle.com/code/tsilveira/applying-heatmaps-for-categorical-data-analysis), [2](https://www.kaggle.com/code/samratp/predict-show-noshow-eda-visualization-model), [3](https://www.kaggle.com/code/andrewmvd/exploring-and-predicting-no-shows-with-xgboost/report)
