@@ -2,7 +2,9 @@
 title: "Practical 1"
 author: "Rifat Fariha B00937648"
 date: "2024-05-17"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -433,6 +435,7 @@ print(rf_fit$results)
 ```
 ```{r}
 # Confusion Matrix
+predictions <- predict(rf_fit, newdata = test)
 conf_matrix <- confusionMatrix(predictions, test$NoShow)
 print(conf_matrix)
 ```
