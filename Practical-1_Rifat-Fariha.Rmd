@@ -464,6 +464,10 @@ var_importance <- varImp(rf_fit)
 # Print variable importance to see the values
 print(var_importance)
 
+# Create var_imp_df from var_importance
+var_imp_df <- as.data.frame(var_importance$importance)
+var_imp_df$Variable <- rownames(var_imp_df)
+
 # Identify and extract the top 10 variables
 top_10_vars <- head(var_imp_df[order(-var_imp_df$Overall), ], 10)
 
@@ -472,7 +476,7 @@ print(top_10_vars)
 
 # Plot variable importance using ggplot2 for the top 10 variables only
 ggplot(top_10_vars, aes(x = reorder(Variable, Overall), y = Overall)) +
-  geom_bar(stat = "identity", fill="steelblue") +
+  geom_bar(stat = "identity", fill = "steelblue") +
   ggtitle("Top 10 Variable Importance from Random Forest Model") +
   xlab("Variables") +
   ylab("Importance") +
