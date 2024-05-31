@@ -48,15 +48,12 @@ There is no explanation or data dictionary with this dataset, which is a surpris
 *transcription:* The details of the disease or procedure.
 *keywords:* Keywords associated with the disease or procedure.
 
-
 Let's see how many different medical specialties are featured in these notes: 
 ```{r}
 
 raw.data %>% dplyr::select(medical_specialty) %>% dplyr::n_distinct()
 ```
-
 So, how many transcripts are there from each specialty:
-
 
 ```{r}
 ggplot2::ggplot(raw.data, ggplot2::aes(y=medical_specialty)) + ggplot2::geom_bar() + labs(x="Document Count", y="Medical Speciality")
@@ -86,7 +83,6 @@ analysis.data <- filtered.data %>%
   left_join(select(filtered.data, -transcription), by = "note_id")
 ```
 
-
 Now let's tokenize the `transcription` to words (unigram) 
 By default this tokenises to words but other options include characters, n-grams, sentences, lines, paragraphs, or separation around a regular expression.
 
@@ -107,12 +103,20 @@ tidytext::stop_words %>% dplyr::group_by(lexicon) %>% dplyr::distinct(word) %>% 
 **2** How many unique unigrams are there in the transcripts from each specialty:
 
 ```{r}
-#Insert code here. 
+# Tokenize the transcription into unigrams
+tokenized.data.unigram <- filtered.data %>%
+  unnest_tokens(word, transcription, to_lower = TRUE)
 
+# Count unique unigrams per specialty
+unique_unigrams <- tokenized.data.unigram %>%
+  group_by(medical_specialty) %>%
+  summarise(num_unique_unigrams = n_distinct(word))
+
+# Print the result
+unique_unigrams
 ```
 
 Let's plot some distribution of unigram tokens (words)
-
 
 ```{r}
 word_counts <- tokenized.data.unigram %>%
@@ -133,9 +137,7 @@ count_distribution <- word_counts %>%
        y = "Number of Words")
 ```
 
-
 Let's plot some distribution of bigram tokens (words)
-
 
 ```{r}
 word_counts <- tokenized.data %>%
@@ -158,8 +160,50 @@ count_distribution <- word_counts %>%
 
 **3** How many unique bi-grams are there in each category without stop words and numbers?
 
-Sometimes we are interested in tokenising/segmenting things other than words like whole sentences or paragraphs.  
+```{r}
+# Filter the data for the specified specialties
+filtered.data <- raw.data %>%
+  filter(medical_specialty %in% c("Orthopedic", "Radiology", "Surgery"))
+
+# Tokenize the transcription into bigrams
+tokenized.data <- filtered.data %>%
+  unnest_tokens(ngram, transcription, token = "ngrams", n = 2, to_lower = TRUE)
+
+# Remove bigrams containing stop words or numbers
+stop_words <- tidytext::stop_words$word
+tokenized.data_filtered <- tokenized.data %>%
+  filter(!(str_detect(ngram, paste(stop_words, collapse = "|")) | str_detect(ngram, "[0-9]")))
+
+# Count unique bigrams per specialty
+unique_bigrams_per_specialty <- tokenized.data_filtered %>%
+  group_by(medical_specialty) %>%
+  summarise(num_unique_bigrams = n_distinct(ngram))
+
+# Print the result
+unique_bigrams_per_specialty
+```
+
+Sometimes we are interested in tokenising/segmenting things other than words like whole sentences or paragraphs.
+
 **4** How many unique sentences are there in each category? Hint: use `?tidytext::unnest_tokens` to see the documentation for this function.
+
+```{r}
+# Filter the data for the specified specialties
+filtered.data <- raw.data %>%
+  filter(medical_specialty %in% c("Orthopedic", "Radiology", "Surgery"))
+
+# Tokenize the transcription into sentences
+tokenized.data_sentences <- filtered.data %>%
+  unnest_tokens(sentence, transcription, token = "sentences")
+
+# Count unique sentences per specialty
+unique_sentences_per_specialty <- tokenized.data_sentences %>%
+  group_by(medical_specialty) %>%
+  summarise(num_unique_sentences = n_distinct(sentence))
+
+# Print the result
+unique_sentences_per_specialty
+```
 
 Now that we've tokenized to words and removed stop words, we can find the most commonly word used within each category:
 
@@ -174,6 +218,10 @@ We should lemmatize the tokenized words to prevent over counting of similar word
 Annoyingly, `tidytext` doesn't have a built-in lemmatizer.
 
 **5** Do you think a general purpose lemmatizer will work well for medical data? Why might it not?
+
+Lemmatization is the process of reducing words to their base or dictionary form. While general-purpose lemmatizers work well for common language text, I believe they may have limitations when applied to medical data. 
+
+This is because medical data often contain specialized terminology, acronyms, drug names, and disease-specific terms that may not be available in a general-purpose dictionary. Due to rare or infrequent words being present, general-purpose lemmatizers might not recognize these specialized terms, resulting in inaccurate lemmatization. Moreover, there may be cruicial domain-specific rules and contextual ambiguity which may get lost during lemmatization. Hence, I believe general-purpose lemmatizers might not work well for medical data. 
 
 Unfortunately, a specialised lemmatizer like in `clinspacy` is going to be very painful to install so we will just use a simple lemmatizer for now:
 
@@ -210,7 +258,38 @@ ggplot2::ggplot(lemma.freq, ggplot2::aes(x=proportion,
 ```
 **6** What does this plot tell you about the relative similarity of lemma frequencies between Surgery and Orthopedic and between radiology and Orthopedic? Based on what these specialties involve, is this what you would expect?
 
+The Surgery vs. Orthopedic scatter plot indicates that many lemmas have similar frequencies in both “Surgery” and “Orthopedic.” However, there are deviations from this line, suggesting that some lemmas are more frequent in one specialty compared to the other.
+
+The points in the Radiology vs. Orthopedic scatter plot are more spread away from the line compared to the Surgery vs. Orthopedic scatter plot. This greater spread indicates more dissimilarity in lemma frequencies between “Radiology” and “Orthopedic.”
+
+The observed patterns align with our expectations since Surgery and Orthopedics share more common terminology due to their overlapping areas of treatment procedures.Whereas, Radiology, with its focus on imaging technology, likely uses a different set of specialized terms.
+
 **7** Modify the above plotting code to do a direct comparison of Surgery and Radiology (i.e., have Surgery or Radiology on the Y-axis and the other 2 specialties as the X facets)
+
+```{r}
+lemma.freq <- lemmatized.data %>% 
+  dplyr::count(medical_specialty, lemma) %>%
+  dplyr::group_by(medical_specialty) %>% 
+  dplyr::mutate(proportion = n / sum(n)) %>%
+  tidyr::pivot_wider(names_from = medical_specialty, values_from = proportion) %>%
+  tidyr::pivot_longer(cols = c(`Orthopedic`, `Radiology`), 
+                      names_to = "medical_specialty", 
+                      values_to = "proportion")
+
+ggplot2::ggplot(lemma.freq, ggplot2::aes(x=proportion, 
+                                         y=`Surgery`,
+                                         color=abs(`Surgery` - proportion))) + 
+  ggplot2::geom_abline(color="gray40", lty=2) +
+  ggplot2::geom_jitter(alpha=0.1, size=2.5, width=0.3, height=0.3) +
+  ggplot2::geom_text(ggplot2::aes(label=lemma), check_overlap=TRUE, vjust=1.5) +
+  ggplot2::scale_x_log10(labels=scales::percent_format()) + 
+  ggplot2::scale_y_log10(labels=scales::percent_format()) + 
+  ggplot2::scale_color_gradient(limits=c(0, 0.001), low="darkslategray4", high="gray75") +
+  ggplot2::facet_wrap(~medical_specialty, ncol = 2) +
+  ggplot2::theme(legend.position="none") +
+  ggplot2::labs(y="Surgery", x = NULL)
+```
+As expected, the Surgery vs Orthopedic scatter plot shows lemmas having similar frequencies as most of the points cluster around the line. This represents common lemmas shared by both specialties. Conversely, points on the Surgery vs Radiology deviate quite a lot from the line as these specialties might have minimal overlapping terms.
 
 ### TF-IDF Normalisation
 
@@ -237,12 +316,23 @@ all.counts.tfidf %>% dplyr::group_by(medical_specialty) %>% dplyr::slice_max(ord
 ```
 **8** Are there any lemmas that stand out in these lists? Why or why not?
 
+Since common lemmas are shared across various surgical procedures, their frequency is higher and hence they do not stand out. The “tf-idf” value combines term frequency with rarity across documents, which is low for these common lemmas.
+
+For Orthopedic specialty, tf-idf values are relatively similar and low across all lemmas indicating that most of the lemmas may be common. This is why none of the lemmas in Orthopedic specialty stands out. Radiology, on the other hand, have varying tf-idf values and relatively higher values compared to Orthopedic or Surgery, which means it has more unique lemmas specific to Radiology. In Radiology, the lemma "left ventricular" stands out with high frequency by low tf-idf value among the other Radiology lemmas. Similarly, Surgery has very high frequency for its lemmas and some of its lemmas have high tf-idf values. Here, "general endotracheal" and "fascia was" stands out for similar reasons.
+
 We can look at transcriptions in full using these lemmas to check how they are used with `stringr::str_detect`
 ```{r}
 analysis.data %>% dplyr::select(medical_specialty, transcription) %>% dplyr::filter(stringr::str_detect(transcription, 'steri strips')) %>% dplyr::slice(1)
 ```
 
-**9** Extract an example of one of the other "top lemmas" by modifying the above code
+**9** Extract an example of one of the other "top lemmas" by modifying the above code.
+
+```{r}
+analysis.data %>%
+  dplyr::select(medical_specialty, transcription) %>%
+  dplyr::filter(!stringr::str_detect(medical_specialty, 'Surgery')) %>%
+  dplyr::slice(1)
+```
 
 ## Topic Modelling
 
@@ -295,8 +385,6 @@ top.terms %>%
     tidytext::scale_y_reordered()
 ```
 
-
-
 Now we can ask how well do these assigned topics match up to the medical specialties from which each of these transcripts was derived.
 
 ```{r}
@@ -325,6 +413,51 @@ Interestingly, Surgery, Orthopedic, and Radiology assign mostly to a single topi
 However, this may all just reflect we are using too few topics in our LDA to capture the range of possible assignments. 
 
 **10** Repeat this with a 6 topic LDA, do the top terms from the 3 topic LDA still turn up? How do the specialties get split into sub-topics?
+
+```{r}
+# Fit a 6-topic LDA model
+emr.lda6 <- topicmodels::LDA(emr.dcm, k=6, control=list(seed=42))
+emr.topics6 <- tidytext::tidy(emr.lda6, matrix='beta')
+```
+
+```{r}
+# Extract the top terms for each topic
+top.terms6 <- emr.topics6 %>% dplyr::group_by(topic) %>% 
+  dplyr::slice_max(beta, n=10) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(topic, -beta)
+
+# Visualize the top terms
+top.terms6 %>% 
+  dplyr::mutate(term=tidytext::reorder_within(term, beta, topic)) %>% 
+  ggplot2::ggplot(ggplot2::aes(beta, term, fill=factor(topic))) + 
+    ggplot2::geom_col(show.legend=FALSE) + 
+    ggplot2::facet_wrap(~ topic, scales='free')  +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, vjust = 1, hjust = 1)) +
+    tidytext::scale_y_reordered()
+```
+
+```{r}
+# Extract document-topic proportions
+specialty_gamma6 <- tidytext::tidy(emr.lda6, matrix='gamma')
+
+# Create a mapping of document IDs to medical specialties
+note_id_specialty_mapping <- lemmatized.data %>%
+  dplyr::mutate(document=as.character(note_id)) %>% 
+  dplyr::select(document, medical_specialty) %>% 
+  dplyr::distinct()
+
+# Join the document-topic proportions with medical specialties
+specialty_gamma6 <- dplyr::left_join(specialty_gamma6, note_id_specialty_mapping)
+
+# Visualize the distribution of topics across medical specialties
+specialty_gamma6 %>%
+  dplyr::mutate(medical_specialty = reorder(medical_specialty, gamma * topic)) %>%
+  ggplot2::ggplot(ggplot2::aes(factor(topic), gamma)) +
+  ggplot2::geom_boxplot() +
+  ggplot2::facet_wrap(~ medical_specialty) +
+  ggplot2::labs(x = "topic", y = expression(gamma))
+```
 
 ## Credits
 
