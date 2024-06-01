@@ -41,6 +41,8 @@ There is no explanation or data dictionary with this dataset, which is a surpris
 
 **1** Using the output of dplyr's `glimpse` command (or rstudio's data viewer by clicking on `raw.data` in the Environment pane) provide a description of what you think each variable in this dataset contains.
 
+There are six variables in the dataset and they are briefly described below.
+
 *note_id:* A unique identifier for each medical note.
 *description:* A description of the patient concern associated with the note.
 *medical_specialty:* The medical field or specialty to which the note belongs.
@@ -80,7 +82,7 @@ analysis.data <- filtered.data %>%
   anti_join(stop_words) %>%
   group_by(note_id) %>%
   summarise(transcription = paste(word, collapse = " ")) %>%
-  left_join(select(filtered.data, -transcription), by = "note_id")
+  left_join(select(filtered.data, -transcription), by = "note_id", copy = TRUE)
 ```
 
 Now let's tokenize the `transcription` to words (unigram) 
@@ -161,26 +163,17 @@ count_distribution <- word_counts %>%
 **3** How many unique bi-grams are there in each category without stop words and numbers?
 
 ```{r}
-# Filter the data for the specified specialties
-filtered.data <- raw.data %>%
-  filter(medical_specialty %in% c("Orthopedic", "Radiology", "Surgery"))
-
-# Tokenize the transcription into bigrams
-tokenized.data <- filtered.data %>%
-  unnest_tokens(ngram, transcription, token = "ngrams", n = 2, to_lower = TRUE)
-
 # Remove bigrams containing stop words or numbers
 stop_words <- tidytext::stop_words$word
-tokenized.data_filtered <- tokenized.data %>%
-  filter(!(str_detect(ngram, paste(stop_words, collapse = "|")) | str_detect(ngram, "[0-9]")))
+tokenized.data_filtered <- tokenized.data.bigram %>%
+  filter(!(str_detect(bigram, paste(stop_words, collapse = "|")) | str_detect(bigram, "[0-9]")))
 
-# Count unique bigrams per specialty
-unique_bigrams_per_specialty <- tokenized.data_filtered %>%
+# Count the unique bigrams for each medical specialty
+unique_bigrams <- tokenized.data_filtered %>%
   group_by(medical_specialty) %>%
-  summarise(num_unique_bigrams = n_distinct(ngram))
+  summarise(unique_bigrams = n_distinct(bigram))
 
-# Print the result
-unique_bigrams_per_specialty
+unique_bigrams
 ```
 
 Sometimes we are interested in tokenising/segmenting things other than words like whole sentences or paragraphs.
