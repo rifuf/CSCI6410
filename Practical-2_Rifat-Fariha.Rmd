@@ -94,7 +94,8 @@ tokenized.data.unigram <- analysis.data %>% tidytext::unnest_tokens(word, transc
 
 You can also do bi-grams
 ```{r}
-tokenized.data <- analysis.data %>% tidytext::unnest_tokens(ngram, transcription, token = "ngrams", n=2, to_lower = TRUE)
+tokenized.data <- analysis.data %>% 
+  tidytext::unnest_tokens(ngram, transcription, token = "ngrams", n = 2, to_lower = TRUE)
 ```
 
 How many stop words are there in `tidytext::stop_words` from each lexicon?
@@ -163,19 +164,14 @@ count_distribution <- word_counts %>%
 **3** How many unique bi-grams are there in each category without stop words and numbers?
 
 ```{r}
-# Remove bigrams containing stop words or numbers
-stop_words <- tidytext::stop_words$word
-tokenized.data_filtered <- tokenized.data.bigram %>%
-  filter(!(str_detect(bigram, paste(stop_words, collapse = "|")) | str_detect(bigram, "[0-9]")))
-
 # Count the unique bigrams for each medical specialty
-unique_bigrams <- tokenized.data_filtered %>%
+unique_bigrams <- tokenized.data %>%
   group_by(medical_specialty) %>%
-  summarise(unique_bigrams = n_distinct(bigram))
+  summarise(unique_bigrams = n_distinct(ngram))
 
+# Display the unique bigrams count per medical specialty
 unique_bigrams
 ```
-
 Sometimes we are interested in tokenising/segmenting things other than words like whole sentences or paragraphs.
 
 **4** How many unique sentences are there in each category? Hint: use `?tidytext::unnest_tokens` to see the documentation for this function.
