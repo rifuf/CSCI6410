@@ -740,12 +740,53 @@ Torchvison provides versions of all the integrated architectures that have alrea
 
 **7_** What is ImageNet aka “ImageNet Large Scale Visual Recognition Challenge 2012”? How many images and classes does it involve? Why might this help us?
 
+The ImageNet Large Scale Visual Recognition Challenge 2012 (ILSVRC2012) was a pivotal competition in the field of computer vision. The goal of this competition was to estimate the content of images for the purpose of retrieval and automatic annotation using a subset of the large hand-labeled ImageNet dataset and identify the main objects present in the images.
+
+*Dataset:* The competition used only a subset of the ImageNet dataset which contains over 10 million labeled images across 10,000+ object categories. This dataset or subset of the dataset served as training data for the challenge.
+
+*Aim of the Competition:* Participants aimed to estimate the content of the images for retrieval and automatic annotation, where test images were presented without initial annotations (no labels or segmentation), and algorithms had to produce labels indicating the objects present in the images. In addition to classification, there was a detection task where algorithms had to specify the location of objects.
+
+*Significance of the Competition:* Most participants used AlexNet, a deep convolutional neural network (CNN) for their models and its performance revolutionized the field. The challenge spurred research in large-scale image classification and localization, leading to advancements in deep learning and CNN architectures. It also provided a benchmark for evaluating progress in object detection and classification across diverse objects.
+
+Considering that this dataset and the ILSVRC2012 competition played a crucial role in shaping the machine learning field we know today, it helps us in understanding how the development of this field and our role in continuing the research in the future.
+
 MobileNet is a pre-trained model that can be effectively utilized in transfer learning scenarios. Do some research about this model.
 
 **8_** Why do you think using this architecture in this practical assignment can help to improve the results? 
 Hint: See MobileNet publication
 
+MobileNet is an efficient convolutional neural network (CNN) architecture designed specifically for mobile and embedded vision applications. It is a computer-vision model open-sourced by Google and designed for training classifiers.
+
+Let’s delve into its key features and understand why this architecture can help us to improve results:
+
+*Depth-wise Separable Convolution:* MobileNet employs a depth-wise separable convolution approach. It consists of two layers - Depth-wise convolution, which applies a single filter per input channel and reduces computation, and Point-wise convolution, which combines depth-wise features across channels. This separation significantly reduces the number of parameters and computations compared to standard convolutions.
+
+*Efficiency and Lightweight Design:* MobileNet’s streamlined architecture builds lightweight deep neural networks. It balances latency and accuracy using simple global hyper-parameters. Developers can choose the right-sized model based on their application constraints.
+
+*Advantages for Transfer Learning:* When applied in transfer learning scenarios, MobileNet’s lightweight design allows it to adapt well to new tasks. It retains competitive accuracy while being mindful of resource limitations. Fine-tuning MobileNet on specific datasets can yield impressive results.
+
+*Practical Assignment Benefits:* Using MobileNet in your practical assignment can lead to:
+1. Faster training and inference: This model can significantly reduce computational overhead considering the huge number of parameters associated with medical data. 
+2. Adaptability: Since this model is adaptable, it can utilize transfer learning to make it adaptable to specific tasks as well as create compatibility with mobile or edge devices.
+3. Good accuracy: Early detection is essential for effective treatment and improved patient outcomes when it comes to pneumonia. This model is especially helpful when fine-tuning relevant data to achieve desirable and accurate results.
+4. Robustness and Variability: Chest X-ray images exhibit variability due to acquisition and processing differences. Since MobileNet is trained on large and high-quality datasets, it can handle the variability that comes with Chest X-ray images.
+
+In summary, MobileNet’s efficiency, accuracy, and adaptability make it a valuable tool for pneumonia detection in chest X-ray images and hence can help our results in this practical.
+
 **9_** How many parameters does this network have? How does this compare to better performing networks available in torch?
+
+The MobileNet architecture has varying parameter counts based on its configuration:
+
+Standard MobileNet: The base MobileNet model contains approximately 4.2 million parameters. It strikes a balance between efficiency and accuracy.
+
+Smaller Versions: Smaller variants of MobileNet exist, with around 1.32 million parameters. These versions maintain efficiency while reducing the model size.
+
+*Comparison to Other Networks:*
+
+MobileNet’s parameter count is significantly lower than heavyweight networks like ResNet or VGG. While MobileNet sacrifices some accuracy, it excels in resource-constrained scenarios. MobileNet’s parameter efficiency makes it a valuable choice for mobile vision applications, especially when compared to larger networks. 
+
+Having said that, it's important to choose an architecture best suited for a specific task. While ResNet is excellent in accuracy but heavier in terms of parameters and TabNet is ideal for tabular data analysis and interpretability, MobileNet is more efficient and suitable for mobile applications. Moreover, we can fine-tune MobileNet on your specific dataset to improve its performance as well as leverage pre-trained weights to allow for transfer learning.
+
 
 In the following you can see an example of how we can load pre-trained models in our codes.
 
