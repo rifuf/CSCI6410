@@ -1,3 +1,12 @@
+---
+title: "Practical 4"
+author: "Rifat Fariha B00937648"
+date: "2024-06-15"
+output:
+  html_document: default
+  pdf_document: default
+---
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -60,7 +69,36 @@ eeg_test <- subset(eeg_data, split == 'test', select = -split)
 
 **0** Knowing the `eeg_data` contains 117 seconds of data, inspect the `eeg_data` dataframe and the code above to and determine how many samples per second were taken?
 
+```{r}
+# The duration of the recording in seconds
+recording_duration <- 117
+
+# Calculate the sampling frequency
+sampling_frequency <- n_samples / recording_duration
+
+# Print the sampling frequency
+sampling_frequency
+```
+We can see that approximately 128 samples per second was taken.
+
 **1** How many EEG electrodes/sensors were used?
+
+To determine the number of EEG electrodes/sensors used in the dataset, we should first inspect the columns of the eeg_data dataframe. Given that the eeg_data dataframe also contains columns like split, eyeDetection, and the added ds (timestamp) column, we need to exclude these from our count of sensor columns. Then, we can just print the number of sensor columns.
+
+```{r}
+# Display the column names
+colnames(eeg_data)
+
+# Exclude the columns that are not sensors
+sensor_columns <- setdiff(colnames(eeg_data), c("split", "eyeDetection", "ds"))
+
+# Count the number of sensor columns
+n_sensors <- length(sensor_columns)
+
+# Print the number of sensors
+n_sensors
+```
+As we can see, 14 EEG electrodes/sensors were used. 
 
 ### Exploratory Data Analysis
 
@@ -92,11 +130,37 @@ ggplot2::ggplot(melt, ggplot2::aes(x=ds, y=microvolts, color=Electrode)) +
 
 **2** Do you see any obvious patterns between eyes being open (dark grey blocks in the plot) and the EEG intensities?
 
+Considering the dark grey blocks to indicate periods when the eyes are open, there doesn’t appear to be a consistent or obvious pattern between eye openness and EEG intensities across all electrodes.
+
+However, when the eyes seem to be open for longer periods of time, it seems EEG signal fluctuations subside and become more consistent. This could be because when eyes are open, the brain is actively processing visual information from the environment. Visual input stimulates various brain regions, including the visual cortex. This activation can influence other brain areas, leading to more synchronized neural activity. As a result, EEG signals may appear less noisy during open-eye periods.
 
 **3** Similarly, based on the distribution of eye open/close state over time to anticipate any temporal correlation between these states?
 
-Let's see if we can directly look at the distribution of EEG intensities and see how they related to eye status.
+To anticipate any temporal correlation between eye open/close states based on the distribution of these states over time, we can calculate and plot the proportion of time spent in each state over different time intervals. This can help in identifying any patterns or cycles in the data.
 
+```{r}
+# Calculate the proportion of time spent in each state over different time intervals
+time_intervals <- seq(0, max(eeg_data$ds), by = 1)  # 1 second intervals
+state_distribution <- eeg_data %>%
+  dplyr::mutate(time_interval = cut(ds, breaks = time_intervals)) %>%
+  dplyr::group_by(time_interval) %>%
+  dplyr::summarize(
+    proportion_closed = mean(eyeDetection == 1),
+    proportion_open = mean(eyeDetection == 0)
+  )
+
+# Plot the proportion of time spent in each state over time intervals
+ggplot(state_distribution, aes(x = as.numeric(time_interval))) +
+  geom_line(aes(y = proportion_closed, color = "Closed")) +
+  geom_line(aes(y = proportion_open, color = "Open")) +
+  labs(x = "Time (seconds)", y = "Proportion", title = "Proportion of Eye States Over Time") +
+  scale_color_manual(values = c("Closed" = "blue", "Open" = "red")) +
+  theme_minimal()
+```
+
+This plot visualizes the EEG electrode intensities over time, with each line representing a different electrode. The vertical blue blocks indicate periods when the eyes are closed and red blocks indicate periods when the eyes are open. It seems that when the eyes are open, EEG signals decrease which may further prove our previous point that the brain is actively processing visual information from the environment. The changes in microvolt levels during periods of eye opening suggest a measurable impact of eye state on the brain's electrical activity.
+
+Let's see if we can directly look at the distribution of EEG intensities and see how they related to eye status.
 
 As there are a few extreme outliers in voltage we will use the `dplyr::filter` function to remove values outwith of 3750 to 50003. The function uses the `%in%` operator to check if each value of microvolts is within that range. The function also uses the `dplyr::mutate()` to change the type of the variable eyeDetection from numeric to a factor (R's categorical variable type).
 
@@ -109,8 +173,6 @@ filt_melt_train <- dplyr::filter(melt_train, microvolts %in% (3750:5000)) %>% dp
 ggplot2::ggplot(filt_melt_train, ggplot2::aes(y=Electrode, x=microvolts, fill=eyeDetection)) + ggplot2::geom_boxplot()
 ```
 
-
-
 Plots are great but sometimes so it is also useful to directly look at the summary statistics and how they related to eye status.
 We will do this by grouping the data based on eye status and electrode before calculating the statistics using the convenient `dplyr::summarise` function.
 
@@ -120,10 +182,9 @@ filt_melt_train %>% dplyr::group_by(eyeDetection, Electrode) %>%
     dplyr::arrange(Electrode)
 ```
 
-
-
-
 **4** Based on these analyses are any electrodes consistently more intense or varied when eyes are open?
+
+
 
 #### Time-Related Trends
 
@@ -138,8 +199,15 @@ apply(eeg_train, 2, tseries::adf.test)
 
 **5** What is stationarity?
 
+Stationarity refers to a property of a time series in which its statistical properties, such as mean, variance, and autocorrelation, are constant over time. In other words, a stationary time series has no predictable patterns, trends, or seasonality, making its behavior more consistent over time.
+
+Stationarity is an important concept in time series analysis and modeling because many statistical methods and models, such as ARIMA, require the data to be stationary. It can be either strict (or strong) stationarity and weak (or second-order) stationarity. In the first one, the entire joint distribution of the series remains unchanged over time, whereas for the latter one, only the first two moments (mean and variance) and the autocovariance function are invariant over time. Stationarity is usually tested through the Augmented Dickey-Fuller (ADF) Test, the Kwiatkowski-Phillips-Schmidt-Shin (KPSS) Test, and/or the Phillips-Perron (PP) Test.
 
 **6** Why are we interested in stationarity? What do the results of these tests tell us? (ignoring the lack of multiple comparison correction...)
+
+Stationarity is a crucial concept in time series analysis for several reasons, and the results of stationarity tests provide valuable insights into the nature and behavior of the data.
+
+
 
 Then we may want to visually explore patterns of autocorrelation (previous values predict future ones) and cross-correlation (correlation across channels over time) using `forecast::ggAcf` function.
 
@@ -152,9 +220,6 @@ Negative autocorrelation indicates the opposite!
 ```{r correlation}
 forecast::ggAcf(eeg_train %>% dplyr::select(-ds))
 ```
-
-
-
 
 
 **7** Do any fields show signs of strong autocorrelation (diagonal plots)? Do any pairs of fields show signs of cross-correlation? Provide examples.
@@ -234,15 +299,78 @@ print(model)
 **10** Using the `caret` library (or any other library/model type you want such as a naive Bayes) fit another model to predict eye opening.
 
 ```{r model2}
+# Load necessary libraries
+library(e1071)
+library(dplyr)
+library(caret)
 
+# Prepare the data
+eeg_train_nb <- eeg_train %>% dplyr::select(-ds)
+eeg_validate_nb <- eeg_validate %>% dplyr::select(-ds)
+
+# Fit a Naive Bayes model
+nb_model <- naiveBayes(eyeDetection ~ ., data = eeg_train_nb)
+
+# Make predictions on the validation set
+nb_preds <- predict(nb_model, eeg_validate_nb)
+
+# Calculate accuracy
+nb_accuracy <- mean(nb_preds == eeg_validate$eyeDetection)
+
+# Print accuracy
+print(paste("Naive Bayes Accuracy:", round(nb_accuracy, 2)))
+
+# Confusion matrix and other metrics
+nb_confusion_matrix <- confusionMatrix(nb_preds, eeg_validate$eyeDetection)
+print(nb_confusion_matrix)
 ```
+The overall accuracy of the Naive Bayes model is about 47.86%. This means that the model correctly predicted the eye status approximately 47.86% of the time.
 
+Sensitivity (true positive rate) for eye opening is 20%. This means the model correctly identified 20% of the cases where the eyes were actually open. Moreover, Specificity (true negative rate) is 81.34%. This means the model correctly identified 81.34% of the cases where the eyes were actually closed. Other than that, balance accuracy is 50.67%, indicating that the model performs slightly better than random guessing overall.
+
+The scores mean that the model struggles to correctly identify when the eyes are open and is better at identifying when the eyes are closed. Overall, the Naive Bayes model in this case is not effective at predicting eye opening from the EEG data.
 
 **11** Using the best performing of the two models (on the validation dataset) calculate and report the test performance (filling in the code below):
 
-```{r test}
+First, we need to make predictions on the test data and evaluate performance metrics for both the models - XGBoost and Naive Bayes.
 
+```{r test}
+# Convert predicted labels to factor with appropriate levels
+xgb_preds_factor <- factor(xgb_preds_binary, levels = levels(factor(eeg_test_labels)))
+
+# Convert actual labels to factor with appropriate levels
+eeg_test_labels_factor <- factor(eeg_test_labels, levels = levels(factor(xgb_preds_binary)))
+
+# Calculate accuracy
+xgb_accuracy <- mean(xgb_preds_factor == eeg_test_labels_factor)
+
+# Print accuracy
+print(paste("XGBoost Accuracy on Test Set:", round(xgb_accuracy, 2)))
+
+# Confusion matrix and other metrics
+xgb_confusion_matrix <- confusionMatrix(xgb_preds_factor, eeg_test_labels_factor)
+print(xgb_confusion_matrix)
 ```
+```{r test}
+# Prepare the test data (assuming it's already prepared similar to validation data)
+eeg_test_nb <- eeg_test %>% dplyr::select(-ds)
+
+# Make predictions on the test set
+nb_preds_test <- predict(nb_model, eeg_test_nb)
+
+# Calculate accuracy
+nb_accuracy_test <- mean(nb_preds_test == eeg_test$eyeDetection)
+
+# Print accuracy
+print(paste("Naive Bayes Accuracy on Test Set:", round(nb_accuracy_test, 2)))
+
+# Confusion matrix and other metrics
+nb_confusion_matrix_test <- confusionMatrix(nb_preds_test, eeg_test$eyeDetection)
+print(nb_confusion_matrix_test)
+```
+We can see that XGBoost performs better than Naive Bayes. The accuracy from XGBoost is 84.35%. whereas that from Naive Bayes is 48.8%.
+
+
 
 **12** Describe 2 possible alternative modeling approaches for prediction of eye opening from EEGs we discussed in the lecture but haven't explored in this notebook.
 
