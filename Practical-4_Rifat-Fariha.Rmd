@@ -70,6 +70,9 @@ eeg_test <- subset(eeg_data, split == 'test', select = -split)
 **0** Knowing the `eeg_data` contains 117 seconds of data, inspect the `eeg_data` dataframe and the code above to and determine how many samples per second were taken?
 
 ```{r}
+# Assuming you have the total number of samples (replace 'n_samples' with the actual value)
+n_samples <- 14980  
+
 # The duration of the recording in seconds
 recording_duration <- 117
 
@@ -184,7 +187,11 @@ filt_melt_train %>% dplyr::group_by(eyeDetection, Electrode) %>%
 
 **4** Based on these analyses are any electrodes consistently more intense or varied when eyes are open?
 
+Considering that the column indicates whether the eyes were open (1) or closed (0), we can look at the mean, median, and standard deviation values to understand which electrodes may have varied due to eye opening and closing. Mean represents the average microvolts recorded for each combination of eye detection and electrode, Median indicates the middle value of the microvolts distribution, and standard deviation measures the variability or spread of the microvolts data.
 
+In general, the mean values show minor differences, but the standard deviation suggests that electrodes F7, FC5, O1,  exhibit more variability when eyes are open. Other than that, standard deviation of FC6, F4, F8, and AF4 suggests that these electrodes exhibit consistent variability regardless of eye state. 
+
+However, these differences are relatively small. Hence, we cannot conclusively say that opened eyes has a lot of impact on EEG electrodes just based on this analysis.
 
 #### Time-Related Trends
 
@@ -205,9 +212,13 @@ Stationarity is an important concept in time series analysis and modeling becaus
 
 **6** Why are we interested in stationarity? What do the results of these tests tell us? (ignoring the lack of multiple comparison correction...)
 
-Stationarity is a crucial concept in time series analysis for several reasons, and the results of stationarity tests provide valuable insights into the nature and behavior of the data.
+Stationarity is a crucial concept in time series analysis for several reasons, and the results of stationarity tests provide valuable insights into the nature and behavior of the data. Stationarity basically signifies that the statistical properties of a time series (such as mean, variance, and covariance) remain constant over time.
 
+The Augmented Dickey-Fuller (ADF) test assesses whether a time series is stationary. The null hypothesis in the ADF test is that the series is non-stationary. If the p-value from the ADF test is less than a significance level (commonly 0.01), we reject the null hypothesis. In other words:
+If p-value < 0.01: We consider the series stationary.
+If p-value ≥ 0.01: The series is likely non-stationary.
 
+From the results, we can see that Electrode AF3, F7, F3, FC5, T7, P7, O1, O2, P8, T8, FC6, F4, F8, AF4, eyeDetection, and ds - all have p-values less than 0.01, suggesting they are stationary. This ensures the stability and reliability of the modeling.
 
 Then we may want to visually explore patterns of autocorrelation (previous values predict future ones) and cross-correlation (correlation across channels over time) using `forecast::ggAcf` function.
 
@@ -224,6 +235,11 @@ forecast::ggAcf(eeg_train %>% dplyr::select(-ds))
 
 **7** Do any fields show signs of strong autocorrelation (diagonal plots)? Do any pairs of fields show signs of cross-correlation? Provide examples.
 
+Autocorrelation measures the correlation between a variable and its past values at different lags within a time series, whereas Cross-correlation assesses the similarity between two distinct signals as a function of the time lag applied to one of them.
+
+In the diagonal plots, we see autocorrelation for individual variables (electrodes in this case). Each diagonal plot represents the correlation of an electrode with itself at different lags (time shifts). If an electrode exhibits strong autocorrelation, we would expect to see significant peaks at lag 0 (indicating a strong correlation with its own past values). Here, from the naked eye, F5, O1, and FC6 appears to have some peaks and could be considered to show some signs of autocorrelation.
+
+The off-diagonal plots (non-diagonal cells) show cross-correlation between pairs of electrodes. For example, the cell where AF3 intersects with F7 represents the cross-correlation between these two electrodes. If there are significant peaks or troughs in these plots, it suggests that certain electrode pairs have temporal dependencies. However, there does not appear to be any significant cross-correlation between any of the electrodes.
 
 #### Frequency-Space 
 
@@ -244,7 +260,11 @@ eegkit::eegpsd(eeg_train %>% dplyr::filter(eyeDetection == 1) %>% dplyr::select(
 
 **8** Do you see any differences between the power spectral densities for the two eye states? If so, describe them.
 
+The two plot shows the power spectral density (PSD) across different EEG channels (electrodes) as a function of frequency for 'Eye Open' and 'Eye Closed' respectively. Patterns related to eye status (open or closed) may be visible as distinctive peaks or variations in power density across channels.
 
+The PSD plot for both eyes open and eyes closed show distinct frequency components, but the high power density distribution differs from one another. The power density appears to be more varied and intense for eyes closed, whereas for eyes open, the power density is more consistent over time.
+
+In summary, the two plots reveal differences in EEG power distribution based on eye status. These variations can provide insights into brain dynamics during different states.
 
 #### Independent Component Analysis
 
@@ -269,6 +289,10 @@ ggplot2::ggplot(mix_melt, ggplot2::aes(x=ds, y=M, color=`Independent Component`)
 
 
 **9** Does this suggest eye opening relates to an independent component of activity across the electrodes?
+
+The output plot suggests that eye opening is related to an independent component (IC) of neuronal activity across the electrodes.
+
+When eyes are opened (as indicated by the vertical grey lines), there are noticeable fluctuations in the IC activities. Specifically, V1 and V3 shows distinct patterns related to eye blink artifacts. V1 corresponds to eye blink onset, while V3 captures the eye blink offset after visual letter presentations. These ICs exhibit temporally distinct activity.
 
 
 ### Eye Opening Prediction
@@ -334,7 +358,17 @@ The scores mean that the model struggles to correctly identify when the eyes are
 
 First, we need to make predictions on the test data and evaluate performance metrics for both the models - XGBoost and Naive Bayes.
 
-```{r test}
+```{r}
+# Convert test dataset to matrix
+eeg_test_matrix <- as.matrix(dplyr::select(eeg_test, -eyeDetection, -ds))
+eeg_test_labels <- as.numeric(eeg_test$eyeDetection) - 1
+
+# Make predictions on the test set
+xgb_preds <- predict(model, newdata = eeg_test_matrix)
+
+# Convert probabilities to binary predictions (assuming threshold 0.5)
+xgb_preds_binary <- ifelse(xgb_preds > 0.5, 1, 0)
+
 # Convert predicted labels to factor with appropriate levels
 xgb_preds_factor <- factor(xgb_preds_binary, levels = levels(factor(eeg_test_labels)))
 
@@ -351,7 +385,7 @@ print(paste("XGBoost Accuracy on Test Set:", round(xgb_accuracy, 2)))
 xgb_confusion_matrix <- confusionMatrix(xgb_preds_factor, eeg_test_labels_factor)
 print(xgb_confusion_matrix)
 ```
-```{r test}
+```{r}
 # Prepare the test data (assuming it's already prepared similar to validation data)
 eeg_test_nb <- eeg_test %>% dplyr::select(-ds)
 
@@ -370,12 +404,25 @@ print(nb_confusion_matrix_test)
 ```
 We can see that XGBoost performs better than Naive Bayes. The accuracy from XGBoost is 84.35%. whereas that from Naive Bayes is 48.8%.
 
-
-
 **12** Describe 2 possible alternative modeling approaches for prediction of eye opening from EEGs we discussed in the lecture but haven't explored in this notebook.
 
+Two alternative modeling approaches for predicting eye opening from EEG data are:
+
+*1. Support Vector Machines (SVM):* SVMs are powerful supervised learning models used for classification tasks. SVMs work by finding the hyperplane that best separates the classes in the feature space, maximizing the margin between the closest points of the classes (support vectors).
+
+They are effective in high-dimensional spaces, which is often the case with EEG data. They are also robust to overfitting and can use different kernel functions (linear, polynomial, radial basis function (RBF), etc.) to handle non-linearly separable data.
+
+*2. Random Forest:* Random Forest is an ensemble learning method that constructs multiple decision trees during training and outputs the mode of the classes for classification tasks. It improves the performance and robustness of individual decision trees.
+
+They can handles a large number of features and samples effectively. It also provides feature importance measures, which can be valuable for understanding which EEG features contribute most to the prediction.
 
 **13** What are 2 R libraries you could use to implement these approaches? (note: you don't actually have to implement them though!)
+
+To implement Support Vector Machines (SVM) and Random Forest models in R, we can use the following libraries:
+
+*'e1071' - Support Vector Machines (SVM):* The e1071 package provides an interface for various machine learning algorithms, including Support Vector Machines. It implements the svm function for training SVM models.It also supports different kernel functions like linear, polynomial, and radial basis function (RBF) and provides functions for model tuning, prediction, and evaluation.
+
+*'randomForest' - Random Forest:* The randomForest package is a widely used implementation of the Random Forest algorithm for classification and regression tasks. It implements the randomForest function for training Random Forest models. It can supports tuning of parameters like the number of trees (ntree) and the number of variables to try at each split (mtry) and provides functionality for assessing variable importance and model performance.
 
 ## Optional
 
